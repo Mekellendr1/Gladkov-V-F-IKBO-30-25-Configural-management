@@ -1,0 +1,1 @@
+# Gladkov-V-F-IKBO-30-25-Configural-management

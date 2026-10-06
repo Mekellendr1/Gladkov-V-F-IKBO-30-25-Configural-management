@@ -1,5 +1,7 @@
 import tkinter as tk
 import argparse as ap
+from vfs_storage import VFSStorage, VFSError
+
 
 class VFS:
     def __init__(self,vfs_name="VFS"):
@@ -8,6 +10,44 @@ class VFS:
         self.name = vfs_name
         self.allowed_commands = ['ls','cd']
         self.args = None
+        self.storage = VFSStorage()
+        self.allowed_commands = ['ls', 'cd', 'vfs-save']
+
+    def execute_command(self, command):
+        if not command:
+            return True
+        parts = command.split()
+        name, args = parts[0], parts[1:]
+    
+        self.terminal_entry(f"$ {command}\n")
+    
+        if name == "exit":
+            self.terminal_entry("Exiting...\n")
+            self.root.after(500, self.root.destroy)
+            return True
+    
+        if name == "vfs-save":
+            return self.cmd_vfs_save(args)
+    
+        if name in self.allowed_commands:
+            self.terminal_entry(f"[zaglushka] {name} {' '.join(args)}\n")
+            return True
+    
+        self.terminal_entry(f"{name}: command not found\n")
+        return False
+
+    def cmd_vfs_save(self, args):
+        if not args:
+            self.terminal_entry("vfs-save: укажите путь для сохранения\n")
+            return False
+        path = args[0]
+        try:
+            self.storage.save(path)
+            self.terminal_entry(f"VFS сохранена в {path}\n")
+            return True
+        except OSError as e:
+            self.terminal_entry(f"vfs-save: ошибка записи: {e}\n")
+            return False
 
     def setup_ui(self):
         """Настраивает окно, создает объекты поля вывода и поля ввода, размещает поля, привязывает передачу текста из поля ввода в функцию on_enter по нажатию Enter и устанавливает курсор на поле ввода."""
@@ -98,14 +138,28 @@ class VFS:
 
 if __name__ == "__main__":
     my_vfs = VFS()
-
     my_vfs.args_parser()
 
     print("=== Отладочный вывод параметров ===")
     print(f"Путь к VFS: {my_vfs.args.vfs_path}")
     print(f"Путь к скрипту: {my_vfs.args.script}")
     print("===================================")
-    if my_vfs.args.script:
-        my_vfs.root.after(100, lambda: my_vfs.run_script(my_vfs.args.script))
+
+    vfs_message = None
+    if my_vfs.args.vfs_path:
+        try:
+            count = my_vfs.storage.load(my_vfs.args.vfs_path)
+            vfs_message = f"VFS загружена из {my_vfs.args.vfs_path}: узлов={count}"
+        except VFSError as e:
+            vfs_message = f"ОШИБКА загрузки VFS: {e}"
+        print(vfs_message)
+
     my_vfs.setup_ui()
+
+    if vfs_message:
+        my_vfs.terminal_entry(vfs_message + "\n")
+
+    if my_vfs.args.script:
+        my_vfs.root.after(100, my_vfs.run_script, my_vfs.args.script)
+
     my_vfs.run()

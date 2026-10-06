@@ -1,0 +1,7 @@
+type,path,owner,content
+dir,/,root,
+dir,/home,root,
+dir,/home/user,user,
+dir,/home/user/docs,user,
+file,/home/user/docs/report.txt,user,UmVwb3J0
+file,/home/user/notes.txt,user,Y29uZmln

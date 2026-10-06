@@ -1,0 +1,4 @@
+ls
+cd /home
+vfs-save vfs_data/saved.csv
+exit

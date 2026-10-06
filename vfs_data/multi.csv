@@ -1,0 +1,5 @@
+type,path,owner,content
+dir,/,root,
+dir,/home,root,
+file,/home/hello.txt,user,SGVsbG8gd29ybGQ=
+file,/home/data.bin,user,AQID

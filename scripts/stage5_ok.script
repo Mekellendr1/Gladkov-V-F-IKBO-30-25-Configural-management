@@ -1,0 +1,8 @@
+ls
+mkdir /home/user/projects
+ls -l /home/user
+chown alice /home/user/notes.txt
+chown bob /home/user/projects
+ls -l /home/user
+vfs-save vfs_data/saved5.csv
+exit

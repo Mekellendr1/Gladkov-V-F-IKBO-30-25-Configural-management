@@ -23,7 +23,62 @@ class VFS:
             'rev': self.cmd_rev,
             'date': self.cmd_date,
             'vfs-save': self.cmd_vfs_save,
+            'mkdir': self.cmd_mkdir,
+            'chown': self.cmd_chown,
         }
+
+    def cmd_mkdir(self, args):
+        """Создаёт новый каталог в VFS (только в памяти)."""
+        if not args:
+            self.terminal_entry("mkdir: missing operand\n")
+            return False
+        label = args[0]
+        target = normalize_path(label, self.storage.cwd)
+        if target in self.storage.nodes:
+            self.terminal_entry(
+                f"mkdir: cannot create directory '{label}': "
+                "File exists\n"
+            )
+            return False
+        parent = parent_of(target)
+        if parent not in self.storage.nodes:
+            self.terminal_entry(
+                f"mkdir: cannot create directory '{label}': "
+                "No such file or directory\n"
+            )
+            return False
+        if self.storage.nodes[parent]['type'] != 'dir':
+            self.terminal_entry(
+                f"mkdir: cannot create directory '{label}': "
+                "Not a directory\n"
+            )
+            return False
+        self.storage.nodes[target] = {
+            'type': 'dir', 'owner': 'root', 'content': b'',
+        }
+        return True
+
+    def cmd_chown(self, args):
+        """Меняет владельца узла VFS (только в памяти)."""
+        if len(args) != 2:
+            self.terminal_entry(
+                "chown: usage: chown <owner> <path>\n"
+            )
+            return False
+        owner, label = args
+        target = normalize_path(label, self.storage.cwd)
+        node = self.storage.nodes.get(target)
+        if node is None:
+            self.terminal_entry(
+                f"chown: cannot access '{label}': "
+                "No such file or directory\n"
+            )
+            return False
+        node['owner'] = owner
+        self.terminal_entry(
+            f"chown: owner of '{label}' is now '{owner}'\n"
+        )
+        return True
 
     def execute_command(self, command):
         """Разбирает команду и передаёт её обработчику."""
@@ -144,27 +199,49 @@ class VFS:
         self.args = parser.parse_args()
 
     def cmd_ls(self, args):
-        """Выводит содержимое каталога VFS."""
+        """Выводит содержимое каталога VFS, -l для подробностей."""
+        long_fmt = '-l' in args
+        rest = [a for a in args if a != '-l']
         target = self.storage.cwd
-        if args:
-            target = normalize_path(args[0], self.storage.cwd)
+        if rest:
+            target = normalize_path(rest[0], self.storage.cwd)
         node = self.storage.nodes.get(target)
         if node is None:
             self.terminal_entry(
-                f"ls: cannot access '{args[0]}': "
+                f"ls: cannot access '{rest[0]}': "
                 "No such file or directory\n"
             )
             return False
         if node['type'] == 'file':
-            self.terminal_entry(target.rsplit('/', 1)[-1] + '\n')
+            if long_fmt:
+                self.terminal_entry(
+                    self.format_node(target, node) + '\n'
+                )
+            else:
+                self.terminal_entry(
+                    target.rsplit('/', 1)[-1] + '\n'
+                )
             return True
-        names = sorted(
-            p.rsplit('/', 1)[-1]
-            for p in self.storage.nodes
+        children = sorted(
+            p for p in self.storage.nodes
             if parent_of(p) == target
         )
-        self.terminal_entry('  '.join(names) + '\n')
+        if long_fmt:
+            lines = [
+                self.format_node(p, self.storage.nodes[p])
+                for p in children
+            ]
+            self.terminal_entry('\n'.join(lines) + '\n')
+        else:
+            names = [p.rsplit('/', 1)[-1] for p in children]
+            self.terminal_entry('  '.join(names) + '\n')
         return True
+
+    def format_node(self, path, node):
+        """Форматирует одну строку вывода ls -l."""
+        kind = 'd' if node['type'] == 'dir' else '-'
+        name = path.rsplit('/', 1)[-1]
+        return f"{kind} {node['owner']:>8}  {name}"
 
     def cmd_cd(self, args):
         """Меняет текущий каталог VFS."""

@@ -13,6 +13,7 @@ class VFSStorage:
 
     def __init__(self):
         self.nodes = {}
+        self.cwd = '/'
 
     def load(self, path):
         """Загружает VFS из CSV. Кидает VFSError при проблемах."""
@@ -66,3 +67,23 @@ class VFSStorage:
                     'owner': node['owner'],
                     'content': base64.b64encode(node['content']).decode() if node['type'] == 'file' else '',
                 })
+
+def parent_of(path):
+    """Возвращает родительский путь, None для корня."""
+    if path == '/':
+        return None
+    return path.rsplit('/', 1)[0] or '/'
+def normalize_path(path, cwd='/'):
+    """Разрешает относительный путь против cwd, схлопывает . и .."""
+    if not path.startswith('/'):
+        path = cwd.rstrip('/') + '/' + path
+    stack = []
+    for part in path.split('/'):
+        if part in ('', '.'):
+            continue
+        if part == '..':
+            if stack:
+                stack.pop()
+        else:
+            stack.append(part)
+    return '/' + '/'.join(stack)

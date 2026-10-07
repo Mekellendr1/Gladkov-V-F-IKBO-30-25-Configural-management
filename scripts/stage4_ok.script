@@ -1,0 +1,14 @@
+date
+rev hello world
+ls
+cd /home
+ls
+cd user
+ls
+cd docs
+ls
+cd ..
+cd ..
+ls /home/user
+rev 12345
+exit

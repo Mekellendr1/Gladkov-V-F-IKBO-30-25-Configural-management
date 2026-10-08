@@ -117,40 +117,59 @@ class VFS:
         флаг -l для подробного списка."""
         long_fmt = '-l' in args
         rest = [a for a in args if a != '-l']
+        label = rest[0] if rest else self.storage.cwd
         target = self.storage.cwd
         if rest:
             target = normalize_path(rest[0], self.storage.cwd)
         node = self.storage.nodes.get(target)
         if node is None:
             self.terminal_entry(
-                f"ls: cannot access '{rest[0]}': "
+                f"ls: cannot access '{label}': "
                 "No such file or directory\n"
             )
             return False
         if node['type'] == 'file':
-            if long_fmt:
-                self.terminal_entry(
-                    self.format_node(target, node) + '\n'
-                )
-            else:
-                self.terminal_entry(
-                    target.rsplit('/', 1)[-1] + '\n'
-                )
-            return True
+            self._ls_file(target, node, long_fmt)
+        else:
+            self._ls_dir(target, long_fmt)
+        return True
+
+    def _ls_file(self, target, node, long_fmt):
+        """Выводит один файл для ls."""
+        if long_fmt:
+            self.terminal_entry(
+                self.format_node(target, node) + '\n'
+            )
+        else:
+            self.terminal_entry(
+                target.rsplit('/', 1)[-1] + '\n'
+            )
+
+    def _ls_dir(self, target, long_fmt):
+        """Выводит содержимое каталога."""
         children = sorted(
             p for p in self.storage.nodes
             if parent_of(p) == target
         )
         if long_fmt:
-            lines = [
-                self.format_node(p, self.storage.nodes[p])
-                for p in children
-            ]
-            self.terminal_entry('\n'.join(lines) + '\n')
+            self._ls_long(children)
         else:
-            names = [p.rsplit('/', 1)[-1] for p in children]
+            self._ls_names(children)
+
+    def _ls_long(self, children):
+        """Выводит подробный список ls -l."""
+        lines = [
+            self.format_node(p, self.storage.nodes[p])
+            for p in children
+        ]
+        if lines:
+            self.terminal_entry('\n'.join(lines) + '\n')
+
+    def _ls_names(self, children):
+        """Выводит имена для обычного ls."""
+        names = [p.rsplit('/', 1)[-1] for p in children]
+        if names:
             self.terminal_entry('  '.join(names) + '\n')
-        return True
 
     def format_node(self, path, node):
         """Форматирует одну строку вывода ls -l."""

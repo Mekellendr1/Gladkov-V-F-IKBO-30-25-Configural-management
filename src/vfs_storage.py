@@ -15,7 +15,9 @@ class VFSStorage:
     def __init__(self):
         """Инициализирует пустой словарь узлов
         и текущий каталог."""
-        self.nodes = {}
+        self.nodes = {
+            '/': {'type': 'dir', 'owner': 'root', 'content': b''},
+        }
         self.cwd = '/'
 
     def load(self, path):
